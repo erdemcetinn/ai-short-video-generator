@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.*
+
+# Cache files (runtime, machine-specific)
+transcript_cache.json
+word_cache.json
+last_video.json
+
+# Output videos
+shorts/
+*.mp4
+*.wav
+*.avi
+*.mov
+temp_*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
