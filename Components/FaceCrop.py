@@ -107,21 +107,20 @@ def crop_to_vertical(input_path, output_path, start, end):
         vf = f"scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
         crop_filter = vf
     else:
-        print("🔍 Yüz tespiti yapılıyor...")
+        print("🔍 Detecting face position...")
         face_x = detect_face_position(input_path)
 
         if face_x is not None:
-            print(f"✅ Yüz tespit edildi (x={face_x})")
+            print(f"✅ Face detected (x={face_x})")
             crop_x = face_x + 60 - target_width // 2
         else:
-            print("🎯 Yüz bulunamadı, hareket takibi kullanılıyor...")
-            motion_x = get_motion_center(input_path)
-            crop_x = motion_x - target_width // 2
+            print("🎯 No face detected, cropping from center...")
+            crop_x = (width - target_width) // 2
 
         crop_x = max(0, min(crop_x, width - target_width))
         crop_filter = f"crop={target_width}:{height}:{crop_x}:0,scale=1080:1920"
 
-    print(f"✂️  Kırpılıyor: {start}s - {end}s")
+    print(f"✂️  Cropping: {start}s - {end}s")
     subprocess.run([
         "ffmpeg", "-i", input_path,
         "-ss", str(start), "-to", str(end),

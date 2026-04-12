@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shorts Generator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f0f0f;
+            color: #e1e1e1;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: #0f0f0f;
+            padding: 16px 0;
+            flex-shrink: 0;
+            border-right: 1px solid #1f1f1f;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px 24px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .logo span {
+            color: #aaa;
+            font-size: 11px;
+            font-weight: 400;
+            display: block;
+            margin-top: 1px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #aaa;
+            cursor: pointer;
+            border-radius: 0;
+            transition: background 0.1s;
+        }
+
+        .nav-item:hover { background: #1f1f1f; color: #fff; }
+        .nav-item.active { background: #1f1f1f; color: #fff; }
+
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            padding: 32px 40px;
+            overflow-y: auto;
+            max-width: 680px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 28px;
+        }
+
+        .card {
+            background: #1f1f1f;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #aaa;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 12px;
+        }
+
+        .upload-area {
+            border: 1.5px dashed #333;
+            border-radius: 8px;
+            padding: 20px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #0f0f0f;
+        }
+
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: #555;
+            background: #161616;
+        }
+
+        .upload-area.has-file {
+            border-color: #444;
+            border-style: solid;
+        }
+
+        .upload-icon { font-size: 32px; margin-bottom: 10px; }
+
+        .upload-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .upload-sub { font-size: 13px; color: #555; }
+        .upload-sub span { color: #aaa; }
+
+        .file-name {
+            color: #aaa;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        input[type="file"] { display: none; }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            max-height: 160px;
+            object-fit: cover;
+        }
+
+        .label {
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e1e1e1;
+            font-size: 14px;
+            padding: 10px 12px;
+            resize: none;
+            height: 64px;
+            outline: none;
+            transition: border-color 0.15s;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        textarea:focus { border-color: #555; }
+        textarea::placeholder { color: #3a3a3a; }
+
+        .btn {
+            background: #fff;
+            color: #0f0f0f;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            font-family: inherit;
+        }
+
+        .btn:hover { opacity: 0.85; }
+
+        .btn:disabled {
+            background: #2a2a2a;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            font-family: inherit;
+            text-decoration: none;
+            display: none;
+        }
+
+        .btn-download:hover { opacity: 0.85; }
+        .btn-download.visible { display: inline-block; }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .status {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+            line-height: 1.5;
+            color: #aaa;
+        }
+
+        .status.processing {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status.success {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            color: #aaa;
+            display: block;
+        }
+
+        .status.error {
+            background: #1a0a0a;
+            border: 1px solid #3a1a1a;
+            color: #f87171;
+            display: block;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #333;
+            border-top-color: #aaa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            AI Shorts
+            <span>by Erdem Cetin</span>
+        </div>
+        <div class="nav-item active">
+            <span class="nav-icon">✦</span> Generate
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">○</span> History
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">◎</span> Settings
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="page-title">Generate Short</div>
+
+        <div class="card">
+            <div class="card-title">Upload Video</div>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">↑</div>
+                <div class="upload-title">Drop your video here</div>
+                <div class="upload-sub"><span>Browse</span> or drag & drop · MP4, MOV, AVI</div>
+                <div class="file-name" id="fileName"></div>
+                <input type="file" id="fileInput" accept="video/*">
+            </div>
+            <video id="preview" controls></video>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Prompt</div>
+            <label class="label" for="prompt">Describe the moment you want — or leave blank and let AI choose</label>
+            <textarea id="prompt" placeholder="e.g. take the part where I explain pricing..."></textarea>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" id="generateBtn" disabled>Generate Short</button>
+            <a class="btn-download" id="downloadBtn">Download Short</a>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const API_URL = "https://<your-api-id>.execute-api.us-east-1.amazonaws.com/upload";
+        const STATUS_URL = "https://<your-api-id>.execute-api.us-east-1.amazonaws.com/status";
+
+        const uploadArea = document.getElementById("uploadArea");
+        const fileInput = document.getElementById("fileInput");
+        const fileName = document.getElementById("fileName");
+        const generateBtn = document.getElementById("generateBtn");
+        const status = document.getElementById("status");
+        const promptEl = document.getElementById("prompt");
+        const preview = document.getElementById("preview");
+        const downloadBtn = document.getElementById("downloadBtn");
+
+        let selectedFile = null;
+
+        uploadArea.addEventListener("click", () => fileInput.click());
+
+        uploadArea.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploadArea.classList.add("drag-over");
+        });
+
+        uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("drag-over"));
+
+        uploadArea.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove("drag-over");
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith("video/")) setFile(file);
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files[0]) setFile(fileInput.files[0]);
+        });
+
+        function setFile(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            uploadArea.classList.add("has-file");
+            generateBtn.disabled = false;
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.style.display = "block";
+        }
+
+        generateBtn.addEventListener("click", async () => {
+            if (!selectedFile) return;
+
+            generateBtn.disabled = true;
+            status.className = "status processing";
+            status.innerHTML = '<div class="spinner"></div> Getting upload URL...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        filename: selectedFile.name,
+                        prompt: promptEl.value.trim()
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed to get upload URL");
+
+                status.innerHTML = '<div class="spinner"></div> Uploading video...';
+                const uploadResponse = await fetch(data.upload_url, {
+                    method: "PUT",
+                    headers: {"Content-Type": "video/mp4"},
+                    body: selectedFile
+                });
+
+                if (!uploadResponse.ok) throw new Error("Failed to upload video to S3");
+
+                status.innerHTML = '<div class="spinner"></div> Processing your video... this may take a few minutes.';
+                pollStatus(data.key);
+
+            } catch (err) {
+                status.className = "status error";
+                status.innerHTML = "Error: " + err.message;
+                generateBtn.disabled = false;
+            }
+        });
+
+        async function pollStatus(key) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${STATUS_URL}?key=${encodeURIComponent(key)}`);
+                    const data = await res.json();
+
+                    if (data.status === "done") {
+                        clearInterval(interval);
+                        status.className = "status success";
+                        status.innerHTML = "Your short is ready.";
+                        downloadBtn.href = data.download_url;
+                        downloadBtn.classList.add("visible");
+                        generateBtn.disabled = false;
+                    }
+                } catch (e) {}
+            }, 10000);
+        }
+    </script>
+</body>
+</html>
+```

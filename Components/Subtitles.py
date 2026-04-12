@@ -1,29 +1,35 @@
 import os
-os.environ["IMAGEMAGICK_BINARY"] = "/opt/homebrew/bin/magick"
+import shutil
+
+_magick = shutil.which("magick") or shutil.which("convert") or "/usr/bin/convert"
+os.environ["IMAGEMAGICK_BINARY"] = _magick
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from moviepy.config import change_settings
-change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/magick"})
+change_settings({"IMAGEMAGICK_BINARY": _magick})
 
-FONT_PATH = os.path.expanduser("~/Library/Fonts/Montserrat-ExtraBold.ttf")
-MAX_GROUP = 3       # maksimum kelime grubu
-PAUSE_THRESHOLD = 0.4  # saniye — bu kadar boşluk varsa yeni grup
+FONT_PATH = os.environ.get(
+    "FONT_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Montserrat-ExtraBold.ttf")
+)
+MAX_GROUP = 3       # maximum words per group
+PAUSE_THRESHOLD = 0.4  # seconds — start a new group if gap exceeds this
 
 
 def _load_font(size):
     try:
         return ImageFont.truetype(FONT_PATH, size)
     except Exception:
-        return ImageFont.truetype("/System/Library/Fonts/Supplemental/Impact.ttf", size)
+        return ImageFont.load_default()
 
 
 def _build_groups(words):
     """
-    Kelimeleri konuşma duraksamalarına göre grupla.
+    Group words by speech pauses.
     words: [{start, end, text, ...}, ...]
-    Döner: [{group_words, group_start, group_end, active_indices}, ...]
+    Returns: [{group_words, group_start, group_end, active_indices}, ...]
     """
     if not words:
         return []
@@ -53,10 +59,10 @@ def _render_frame(group_words, active_idx, font, video_w, video_h):
 
     max_w = int(video_w * 0.92)
 
-    # Kelimeleri büyük harfe çevir
+    # Uppercase all words
     words_upper = [w.upper() for w in group_words]
 
-    # Tüm kelimeler tek satırda sığana kadar font küçült
+    # Shrink font until all words fit on one line
     current_font = font
     while True:
         space_w = draw.textbbox((0, 0), " ", font=current_font)[2]
@@ -85,16 +91,16 @@ def _render_frame(group_words, active_idx, font, video_w, video_h):
 
 
 def add_subtitles(video_path, segments, start_offset, output_path):
-    print("📝 Altyazılar ekleniyor...")
+    print("📝 Adding subtitles...")
 
     video = VideoFileClip(video_path)
     video_w, video_h = video.w, video.h
     video_duration = video.duration
 
-    font_size = max(60, video_h // 14)
+    font_size = max(120, video_h // 10)
     font = _load_font(font_size)
 
-    # Kelimeleri filtrele ve sırala
+    # Filter and sort words
     words = []
     for seg in segments:
         s = seg["start"] - start_offset
@@ -113,7 +119,7 @@ def add_subtitles(video_path, segments, start_offset, output_path):
 
     words.sort(key=lambda x: x["start"])
 
-    # Konuşma duraksamalarına göre grupla
+    # Group by speech pauses
     groups = _build_groups(words)
 
     text_clips = []

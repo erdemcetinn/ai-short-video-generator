@@ -9,16 +9,22 @@ load_dotenv()
 aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY")
 
 _DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WORD_CACHE = os.path.join(_DIR, "word_cache.json")
-TRANSCRIPT_CACHE = os.path.join(_DIR, "transcript_cache.json")
 
-PAUSE_THRESHOLD = 0.5  # saniye — cümle grubu sınırı
+
+def _cache_paths(video_path):
+    base = os.path.splitext(os.path.basename(video_path))[0]
+    return (
+        os.path.join(_DIR, f"transcript_cache_{base}.json"),
+        os.path.join(_DIR, f"word_cache_{base}.json")
+    )
+
+PAUSE_THRESHOLD = 0.5  # seconds — sentence group boundary
 
 
 def _words_to_segments(word_segments):
     """
-    AssemblyAI kelime listesinden cümle bazlı segment listesi üret.
-    Noktalama işareti veya uzun duraksamada yeni cümle başlar.
+    Build sentence-level segments from AssemblyAI word list.
+    A new sentence starts on punctuation or a long pause.
     """
     if not word_segments:
         return []
@@ -54,21 +60,20 @@ def _words_to_segments(word_segments):
 
 
 def _correct_transcript(segments):
-    """GPT ile transkript metinlerindeki hataları düzelt."""
+    """Use GPT to fix transcription errors in the text."""
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    # Sadece metinleri gönder, timestamp'leri koru
     texts = [s["text"] for s in segments]
     combined = "\n".join(f"{i}: {t}" for i, t in enumerate(texts))
 
-    print("✏️  GPT transkript hatalarını düzeltiyor...")
+    print("✏️  GPT correcting transcript errors...")
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{
             "role": "user",
-            "content": f"""Aşağıdaki Türkçe konuşma transkripti var. Her satır bir segment.
-Sadece kelime/harf hatalarını düzelt. Cümle yapısını, anlamı, sırayı değiştirme.
-Aynı format ile geri ver (satır numarası: metin).
+            "content": f"""Below is a speech transcript. Each line is a segment.
+Fix only word/spelling errors. Do not change sentence structure, meaning, or order.
+Return in the same format (line number: text).
 
 {combined}"""
         }],
@@ -92,20 +97,21 @@ Aynı format ile geri ver (satır numarası: metin).
             "text": corrected_texts.get(i, seg["text"])
         })
 
-    print("✅ Transkript düzeltildi.")
+    print("✅ Transcript corrected.")
     return corrected_segments
 
 
 def transcribe(video_path, use_cache=True, youtube_url=None):
-    """Transkripti AssemblyAI kelime verisinden türet."""
+    """Build transcript from AssemblyAI word data."""
+    TRANSCRIPT_CACHE, WORD_CACHE = _cache_paths(video_path)
+
     if use_cache and os.path.exists(TRANSCRIPT_CACHE):
-        print("📋 Transkript cache'den yükleniyor...")
+        print("📋 Loading transcript from cache...")
         with open(TRANSCRIPT_CACHE) as f:
             return json.load(f)
 
-    # Önce word_cache varsa ondan türet
     if os.path.exists(WORD_CACHE):
-        print("📋 Kelime verisinden transkript türetiliyor...")
+        print("📋 Building transcript from word cache...")
         with open(WORD_CACHE) as f:
             word_segments = json.load(f)
     else:
@@ -117,23 +123,26 @@ def transcribe(video_path, use_cache=True, youtube_url=None):
     with open(TRANSCRIPT_CACHE, "w", encoding="utf-8") as f:
         json.dump(segments, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ {len(segments)} segment oluşturuldu.")
+    print(f"✅ {len(segments)} segments created.")
     return segments
 
 
 def get_word_timed_segments(video_path, youtube_segments=None):
-    """AssemblyAI ile kelime bazlı hassas zamanlama."""
+    """Get word-level timing from AssemblyAI."""
+    _, WORD_CACHE = _cache_paths(video_path)
+
     if os.path.exists(WORD_CACHE):
-        print("📋 Kelime zamanlaması cache'den yükleniyor...")
+        print("📋 Loading word timing from cache...")
         with open(WORD_CACHE) as f:
             return json.load(f)
 
-    print("⏱️  Kelime zamanlaması hesaplanıyor (AssemblyAI)...")
+    print("⏱️  Computing word timing (AssemblyAI)...")
     audio_path = extract_audio(video_path)
 
     transcriber = aai.Transcriber()
-    config = aai.TranscriptionConfig(language_code="tr", speech_models=["universal-2"])
+    config = aai.TranscriptionConfig(language_detection=True, speech_models=["universal-2"])
     result = transcriber.transcribe(audio_path, config=config)
+    print(f"🌐 Detected language: {result.json_response.get('language_code', '?')}")
 
     if os.path.exists(audio_path):
         os.remove(audio_path)
@@ -149,13 +158,14 @@ def get_word_timed_segments(video_path, youtube_segments=None):
             "text": word.text
         })
 
-    # Overlap düzelt
+    # Fix overlaps
     for i in range(len(word_segments) - 1):
         if word_segments[i]["end"] > word_segments[i + 1]["start"]:
             word_segments[i]["end"] = word_segments[i + 1]["start"]
 
+    _, WORD_CACHE = _cache_paths(video_path)
     with open(WORD_CACHE, "w", encoding="utf-8") as f:
         json.dump(word_segments, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ {len(word_segments)} kelime zamanlaması hesaplandı.")
+    print(f"✅ {len(word_segments)} word timings computed.")
     return word_segments

@@ -4,7 +4,7 @@ from openai import OpenAI
 
 
 def _find_by_user_prompt(user_prompt, segments, video_duration, excluded_note, client):
-    """Kullanıcının tarif ettiği içeriği transkriptte bulur ve 3 seçenek döner."""
+    """Find the segment matching the user's description and return 3 candidates."""
     transcript_text = ""
     for seg in segments:
         transcript_text += f"[{seg['start']:.1f}s - {seg['end']:.1f}s]: {seg['text']}\n"
@@ -12,43 +12,43 @@ def _find_by_user_prompt(user_prompt, segments, video_duration, excluded_note, c
     candidate_schema = {
         "type": "object",
         "properties": {
-            "start_time": {"type": "number", "description": "Seçilen kısmın başladığı segment'in start timestamp'i — transkriptteki [X.Xs] değeri olmalı"},
-            "end_time": {"type": "number", "description": "Seçilen kısmın bittiği segment'in end timestamp'i — transkriptteki [X.Xs] değeri olmalı"},
+            "start_time": {"type": "number", "description": "Start timestamp of the selected segment — must match [X.Xs] value from the transcript"},
+            "end_time": {"type": "number", "description": "End timestamp of the selected segment — must match [X.Xs] value from the transcript"},
             "viral_score": {"type": "number", "description": "0-100"},
             "hook_score": {"type": "number", "description": "0-100"},
-            "reason": {"type": "string", "description": "Neden bu kısmı seçtin"},
-            "transcript": {"type": "string", "description": "Seçilen kısmın tam metni — start_time'dan end_time'a kadar olan tüm metin"}
+            "reason": {"type": "string", "description": "Why you selected this segment"},
+            "transcript": {"type": "string", "description": "Full text of the selected segment from start_time to end_time"}
         },
         "required": ["start_time", "end_time", "viral_score", "hook_score", "reason", "transcript"]
     }
 
     functions = [{
         "name": "select_highlights",
-        "description": "3 farklı segment öner",
+        "description": "Suggest 3 different segments",
         "parameters": {
             "type": "object",
             "properties": {
-                "candidate_1": {**candidate_schema, "description": "En iyi seçenek"},
-                "candidate_2": {**candidate_schema, "description": "İkinci seçenek"},
-                "candidate_3": {**candidate_schema, "description": "Üçüncü seçenek"},
+                "candidate_1": {**candidate_schema, "description": "Best option"},
+                "candidate_2": {**candidate_schema, "description": "Second option"},
+                "candidate_3": {**candidate_schema, "description": "Third option"},
             },
             "required": ["candidate_1", "candidate_2", "candidate_3"]
         }
     }]
 
-    prompt = f"""Sen bir video editörüsün. Aşağıdaki transkript bir YouTube videosuna ait.
+    prompt = f"""You are a video editor. The following transcript is from a YouTube video.
 
-Kullanıcı şunu istiyor: "{user_prompt}"
+The user wants: "{user_prompt}"
 
-Transkripti oku, kullanıcının isteğini anla, ve bu videodan YouTube Shorts için en iyi 3 kısmı öner.
-Kurallara bağlı kalma — kendi fikir yürüt. Hangi kısım izleyiciyi en çok etkiler, en anlamlı mesajı verir, en iyi short olur diye düşün.
+Read the transcript, understand the user's request, and suggest the 3 best segments for a YouTube Short.
+Don't just follow rules — use your judgement. Think about which segment would have the most impact, deliver the strongest message, and make the best short.
 
-ÖNEMLİ:
-- start_time olarak transkriptteki segment'in başlangıç timestamp'ini kullan (köşeli parantez içindeki ilk sayı)
-- end_time olarak transkriptteki segment'in bitiş timestamp'ini kullan (köşeli parantez içindeki ikinci sayı)
-- transcript alanına start_time'dan end_time'a kadar olan kelimelerin TAMAMINI yaz
+IMPORTANT:
+- Use the segment's start timestamp from the transcript as start_time (first number in square brackets)
+- Use the segment's end timestamp from the transcript as end_time (second number in square brackets)
+- Write ALL words from start_time to end_time in the transcript field
 {excluded_note}
-Transkript:
+Transcript:
 {transcript_text}"""
 
     response = client.chat.completions.create(
@@ -186,8 +186,8 @@ STRICT RULES:
 - end_time MUST be the natural end of a complete idea — if the speaker is mid-sentence or mid-argument at end_time, you chose wrong
 - start_time MUST be the timestamp of the first word of a grammatically complete, self-contained sentence
 - Read the transcript text at your chosen start_time and ask yourself: "Could this sentence stand alone as the opening of a speech?" If NO — if it continues a previous thought, references something said before, or feels like a mid-sentence — move forward until you find a proper sentence opener
-- You understand Turkish grammar: use that knowledge to identify real sentence boundaries, not just punctuation
-- Duration: izleyici klibi bitirdiğinde tam ve anlamlı bir mesaj almış hissetmeli. Süreyi içerik belirlesin.
+- You understand the grammar of the video's language: use that knowledge to identify real sentence boundaries, not just punctuation
+- Duration: the viewer should feel they received a complete, meaningful message when the clip ends. Let the content determine the length.
 - start_time >= 0, end_time <= {video_duration:.0f}
 - DO NOT pick the first segment of the video unless it's truly exceptional
 - The 'reason' field must quote the ACTUAL opening AND closing words to prove the thought is complete

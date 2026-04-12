@@ -1,0 +1,6 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+# S3 bucket names must be globally unique across all AWS accounts.
+
+project_name   = "ai-shorts-yourname"   # used as prefix for all resources + website bucket name
+s3_bucket_name = "ai-shorts-yourname"   # main bucket for video input/output
+aws_region     = "us-east-1"
