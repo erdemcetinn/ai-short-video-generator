@@ -4,6 +4,10 @@ Automatically extracts viral short clips from long videos using AI — transcrip
 
 ## Demo
 
+**Web UI**
+
+![AI Shorts UI](docs/ui-screenshot.png)
+
 **Input — full video**
 [▶ Download / Watch](https://github.com/erdemcetinn/ai-short-video-generator/releases/download/ai_short_videos/newestvideo.mp4)
 
