@@ -4,13 +4,9 @@ Automatically extracts viral short clips from long videos using AI — transcrip
 
 ## Demo
 
-**Input — original video (20 min)**
+**Input:** [20-min original video](https://github.com/erdemcetinn/ai-short-video-generator/releases/download/ai_short_videos/newestvideo.mp4) → **Output:** AI-selected short, cropped 9:16, word-level subtitles — processed in ~4 min at ~$0.03 on ECS Fargate
 
-<video src="https://github.com/erdemcetinn/ai-short-video-generator/releases/download/ai_short_videos/newestvideo.mp4" controls width="100%"></video>
-
-**Output — AI-generated short (~$0.03, ~4 min on ECS Fargate)**
-
-<video src="https://github.com/erdemcetinn/ai-short-video-generator/releases/download/ai_short_videos/newestvideo_short.mp4" controls width="100%"></video>
+![demo](demo.gif)
 
 ---
 
