@@ -10,11 +10,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import boto3
-
-
 def download_from_s3(s3_url, local_path):
     """s3://bucket/key/video.mp4 → local_path"""
+    import boto3
     s3_url = s3_url.replace("s3://", "")
     bucket, key = s3_url.split("/", 1)
     print(f"⬇️  Downloading from S3: s3://{bucket}/{key}")
@@ -25,6 +23,7 @@ def download_from_s3(s3_url, local_path):
 
 def upload_to_s3(local_path, bucket, key):
     """local_path → s3://bucket/key"""
+    import boto3
     print(f"⬆️  Uploading to S3: s3://{bucket}/{key}")
     boto3.client("s3").upload_file(local_path, bucket, key)
     print(f"✅ Uploaded: s3://{bucket}/{key}")
